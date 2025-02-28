@@ -552,21 +552,13 @@ io.on('connection', (socket) => {
     console.log('New user connected');
 
     socket.on('user_join', async (userData) => {
-        try {
-            console.log('User joined:', userData);
-            
-            // Store user data in the users Map
-            users.set(socket.id, {
-                username: userData.username || 'زائر',
-                uid: userData.uid || 'guest',
-                isGuest: userData.isAnonymous || false
-            });
-            
-            socket.emit('connection_success', { message: 'Connected successfully' });
-        } catch (error) {
-            console.error('Error handling user join:', error);
-            socket.emit('error', { message: 'Failed to join' });
-        }
+        users.set(socket.id, userData);
+        
+        // Send available rooms to user
+        socket.emit('available_rooms', Array.from(chatRooms.values()).map(room => ({
+            id: room.id,
+            name: room.name
+        })));
     });
 
     socket.on('join_room', async (data) => {

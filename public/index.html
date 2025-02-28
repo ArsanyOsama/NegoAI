@@ -383,29 +383,16 @@
             currentUser.textContent = 'زائر';
             userAvatar.innerHTML = '<i class="fas fa-user"></i>';
             
-            // Initialize socket for guest
-            window.socket = io();
-            
             // Connect to socket
-            window.socket.emit('user_join', {
+            const socket = io();
+            socket.emit('user_join', {
                 username: 'زائر',
                 uid: guestId
             });
             
-            window.socket.emit('join_room', {
+            socket.emit('join_room', {
                 roomId: 'general',
                 username: 'زائر'
-            });
-            
-            // Listen for messages
-            window.socket.on('new_message', (data) => {
-                appendMessage(data);
-            });
-            
-            // Listen for errors
-            window.socket.on('error', (error) => {
-                console.error('Socket error:', error);
-                alert('خطأ في الاتصال: ' + error.message);
             });
             
             console.log("User entered as guest with ID:", guestId);
@@ -465,101 +452,47 @@
         });
 
         // Functions
-        function appendMessage(data) {
-            const { message, sender, type } = data;
-            const isCurrentUser = sender === getCurrentUser().displayName;
-            
+        function appendMessage(message) {
+            const messagesContainer = document.getElementById('messagesContainer');
             const messageElement = document.createElement('div');
-            messageElement.className = `message ${isCurrentUser ? 'outgoing' : 'incoming'} ${type || ''}`;
             
-            let messageContent = `
-                <div class="message-header">
-                    <span class="sender">${sender}</span>
-                    <span class="time">${new Date().toLocaleTimeString()}</span>
-                </div>
-                <div class="message-content">
-                    ${message}
-                </div>
+            messageElement.className = message.isAI ? 'message ai-message' : 'message user-message';
+            messageElement.innerHTML = `
+                <div class="message-sender">${message.sender}</div>
+                <div class="message-content">${message.text}</div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
             `;
             
-            messageElement.innerHTML = messageContent;
             messagesContainer.appendChild(messageElement);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-        
+
         // Send message
         document.getElementById('sendButton').addEventListener('click', () => {
-            const message = document.getElementById('messageInput').value.trim();
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
             if (message) {
-                socket.emit('send_message', {
-                    message,
-                    roomId: 'general',
-                    username: getCurrentUser().displayName,
-                    userId: getCurrentUser().uid
-                });
+                const messageData = {
+                    sender: firebase.auth().currentUser.displayName,
+                    text: message,
+                    room: 'general',
+                    isAI: false
+                };
                 
-                document.getElementById('messageInput').value = '';
+                socket.emit('message', messageData);
+                appendMessage(messageData);
+                messageInput.value = '';
             }
         });
 
-        // Enter key to send
+        // Handle enter key
         document.getElementById('messageInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
+            if (e.key === 'Enter') {
                 document.getElementById('sendButton').click();
             }
         });
         
-        // Handle fraud detection form
-        document.getElementById('fraud-detection-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const description = document.getElementById('property-description').value;
-            const price = document.getElementById('property-price').value;
-            const location = document.getElementById('property-location').value;
-            
-            if (!description || !price || !location) {
-                alert('Please fill in all required fields');
-                return;
-            }
-            
-            const button = document.getElementById('analyze-property-btn');
-            const originalText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحليل...';
-            button.disabled = true;
-            
-            // Prepare request data
-            const requestData = {
-                description: description,
-                price: price,
-                location: location,
-                userId: getCurrentUser().uid,
-                username: getCurrentUser().displayName
-            };
-            
-            // Send request to API
-            fetch('/api/fraud-detection', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Fraud detection result:', data);
-                // Update UI with result
-                button.innerHTML = originalText;
-                button.disabled = false;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error occurred during analysis');
-                button.innerHTML = originalText;
-                button.disabled = false;
-            });
-        });
-
         // Get the current user (either signed in or guest)
         function getCurrentUser() {
             return firebase.auth().currentUser || window.guestUser || { displayName: 'زائر', uid: 'guest' };
@@ -577,8 +510,8 @@
                 const messageData = {
                     message: '@nego ' + situation,
                     roomId: 'general',
-                    username: getCurrentUser().displayName,
-                    userId: getCurrentUser().uid
+                    username: firebase.auth().currentUser.displayName,
+                    userId: firebase.auth().currentUser.uid
                 };
                 
                 socket.emit('send_message', messageData);
