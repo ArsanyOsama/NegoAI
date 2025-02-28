@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nego AI Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Message feedback styles */
+        .message-feedback {
+            text-align: center;
+            padding: 8px 12px;
+            margin: 10px auto;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            color: #555;
+            font-style: italic;
+            max-width: 80%;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        
+        /* Login Screen */
+        .login-screen {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-color: var(--background-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .login-container {
+            background-color: var(--background-light);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .login-container h2 {
+            margin-bottom: 20px;
+            color: var(--text-color);
+        }
+        
+        .google-sign-in {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            color: #444;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .google-sign-in:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .google-sign-in img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+        
+        .login-divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: var(--text-muted);
+        }
+        
+        .login-divider::before,
+        .login-divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .login-divider span {
+            padding: 0 15px;
+        }
+        
+        .skip-login-btn {
+            background-color: var(--accent-color-soft);
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .skip-login-btn:hover {
+            background-color: var(--accent-color);
+        }
+        
+        .user-avatar i {
+            font-size: 18px;
+            color: #ffffff;
+        }
+        
+        .guest-indicator {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <h2>Welcome to Nego AI Chat</h2>
+            <button onclick="handleLogin()" id="googleSignIn" class="google-sign-in">
+                <img src="https://www.google.com/favicon.ico" alt="Google">
+                Sign in with Google
+            </button>
+            <div class="login-divider">
+                <span>or</span>
+            </div>
+            <button onclick="handleSkipLogin()" id="skipLogin" class="skip-login-btn">
+                دخول كزائر
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="chat-container" id="chatContainer" style="display: none;">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="user-profile">
+                <div class="user-avatar" id="userAvatar"></div>
+                <div class="user-info">
+                    <span id="currentUser"></span>
+                    <button id="logoutButton" class="logout-button">
+                        <i class="ri-logout-box-line"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <div class="rooms-container">
+                <div class="room-item active" data-room="general">
+                    <span>General Chat</span>
+                    <p>Open discussions about anything and everything</p>
+                </div>
+                <div class="room-item" data-room="tech">
+                    <span>Tech Support</span>
+                    <p>Get help with technical issues</p>
+                </div>
+                <div class="room-item" data-room="creative">
+                    <span>Creative Corner</span>
+                    <p>Share your creative ideas and projects</p>
+                </div>
+                <div class="room-item" data-room="gaming">
+                    <span>Gaming Zone</span>
+                    <p>Discuss games and find gaming partners</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="chat-main">
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message">
+                    مرحباً بك في Nego AI! يمكنك سؤالي عن العقارات والتفاوض باستخدام @nego
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <input type="text" id="messageInput" placeholder="Type your message..." class="chat-input">
+                <button id="sendButton" class="send-button">
+                    <i class="ri-send-plane-fill"></i>
+                </button>
+            </div>
+            
+            <!-- Negotiation Assistant Panel -->
+            <div class="negotiation-panel">
+                <h3>Nego AI - مساعد التفاوض</h3>
+                <p>أرسل سؤالاً أو موقفًا للحصول على نصائح متخصصة في التفاوض العقاري</p>
+                
+                <div class="negotiation-examples">
+                    <div class="example-item" id="example1">
+                        <i class="ri-money-dollar-circle-line"></i>
+                        <span>تخفيض سعر شقة</span>
+                    </div>
+                    <div class="example-item" id="example2">
+                        <i class="ri-discuss-line"></i>
+                        <span>إثبات المبالغة في السعر</span>
+                    </div>
+                    <div class="example-item" id="example3">
+                        <i class="ri-tools-line"></i>
+                        <span>استخدام العيوب للتفاوض</span>
+                    </div>
+                </div>
+                
+                <div class="negotiation-form">
+                    <textarea id="negotiationSituation" placeholder="اكتب موقف التفاوض هنا... مثال: أرغب في شراء شقة بمساحة 120م في حي الروضة، المالك يطلب 800 ألف والوسطاء يقولون أن السعر العادل 700 ألف..."></textarea>
+                    <button id="getNegotiationAdvice" class="negotiation-button">
+                        <i class="ri-question-answer-line"></i>
+                        تحليل الموقف وتقديم النصائح
+                    </button>
+                </div>
+                
+                <!-- Advanced NLP & Fraud Detection -->
+                <div class="advanced-tools-toggle">
+                    <i class="fas fa-chevron-down"></i>
+                    <span>أدوات متقدمة للتفاوض والتحليل</span>
+                </div>
+                
+                <div class="advanced-tools hidden">
+                    <div class="fraud-detection-section">
+                        <h4>كشف الاحتيال العقاري</h4>
+                        <form id="fraud-detection-form" class="fraud-detection-form">
+                            <div class="form-group">
+                                <label for="property-description">وصف العقار</label>
+                                <textarea id="property-description" placeholder="أدخل وصف العقار المعروض..." required></textarea>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="property-price">السعر المطلوب</label>
+                                    <input type="number" id="property-price" placeholder="السعر بالريال" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="property-location">الموقع</label>
+                                    <input type="text" id="property-location" placeholder="المدينة / الحي" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="property-type">نوع العقار</label>
+                                    <select id="property-type" required>
+                                        <option value="">اختر نوع العقار</option>
+                                        <option value="شقة">شقة</option>
+                                        <option value="فيلا">فيلا</option>
+                                        <option value="أرض">أرض</option>
+                                        <option value="عمارة">عمارة</option>
+                                        <option value="مكتب">مكتب</option>
+                                        <option value="محل تجاري">محل تجاري</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="seller-info">معلومات البائع</label>
+                                    <input type="text" id="seller-info" placeholder="اسم البائع / معلومات التواصل" required>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="fraud-detection-button">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>تحليل مخاطر الاحتيال</span>
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="sentiment-analysis-section">
+                        <form id="sentiment-analysis-form" class="sentiment-analysis-form">
+                            <h4>تحليل المشاعر وتكتيكات التفاوض</h4>
+                            <div class="form-group">
+                                <label for="conversation-text">نص المحادثة / الرسائل</label>
+                                <textarea id="conversation-text" placeholder="أدخل نص المحادثة التفاوضية للتحليل..." required></textarea>
+                            </div>
+                            
+                            <button type="submit" class="sentiment-analysis-button">
+                                <i class="fas fa-brain"></i>
+                                <span>تحليل المحادثة والمشاعر</span>
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="market-insights-section">
+                        <h4>بيانات واتجاهات السوق</h4>
+                        <form id="market-insights-form" class="market-insights-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="market-location">الموقع</label>
+                                    <select id="market-location" required>
+                                        <option value="">اختر المدينة</option>
+                                        <option value="الرياض">الرياض</option>
+                                        <option value="جدة">جدة</option>
+                                        <option value="الدمام">الدمام</option>
+                                        <option value="مكة">مكة</option>
+                                        <option value="المدينة">المدينة المنورة</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="market-property-type">نوع العقار</label>
+                                    <select id="market-property-type" required>
+                                        <option value="">اختر نوع العقار</option>
+                                        <option value="شقة">شقة</option>
+                                        <option value="فيلا">فيلا</option>
+                                        <option value="أرض">أرض</option>
+                                        <option value="عمارة">عمارة</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <button type="button" id="get-market-insights" class="market-insights-button">
+                                <i class="fas fa-chart-line"></i>
+                                <span>الحصول على بيانات السوق</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script src="app.js" defer></script>
+    <script src="market-insights.js" defer></script>
+    <script src="negotiation-tactics.js" defer></script>
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB50E7hCdliVh9JlnZuwa16dFMRsz_haP4",
+            authDomain: "gdghack-cf44e.firebaseapp.com",
+            projectId: "gdghack-cf44e",
+            storageBucket: "gdghack-cf44e.appspot.com",
+            messagingSenderId: "1007183854822",
+            appId: "1:1007183854822:web:83dae9660562ea08570f27"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Initialize Socket.io with explicit URL
+        const socket = io('http://localhost:3002');
+
+        function handleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider)
+                .catch(error => {
+                    console.error('Login error:', error);
+                    alert('Login failed. Please try again.');
+                });
+        }
+
+        function handleSkipLogin() {
+            const loginScreen = document.getElementById('loginScreen');
+            const chatContainer = document.getElementById('chatContainer');
+            const currentUser = document.getElementById('currentUser');
+            const userAvatar = document.getElementById('userAvatar');
+            
+            // Create a guest user
+            const guestId = 'guest-' + Math.random().toString(36).substring(2, 9);
+            window.guestUser = {
+                displayName: 'زائر',
+                uid: guestId,
+                isAnonymous: true
+            };
+            
+            // Update UI
+            loginScreen.style.display = 'none';
+            chatContainer.style.display = 'flex';
+            currentUser.textContent = 'زائر';
+            userAvatar.innerHTML = '<i class="fas fa-user"></i>';
+            
+            // Initialize socket for guest
+            window.socket = io();
+            
+            // Connect to socket
+            window.socket.emit('user_join', {
+                username: 'زائر',
+                uid: guestId
+            });
+            
+            window.socket.emit('join_room', {
+                roomId: 'general',
+                username: 'زائر'
+            });
+            
+            // Listen for messages
+            window.socket.on('new_message', (data) => {
+                appendMessage(data);
+            });
+            
+            // Listen for errors
+            window.socket.on('error', (error) => {
+                console.error('Socket error:', error);
+                alert('خطأ في الاتصال: ' + error.message);
+            });
+            
+            console.log("User entered as guest with ID:", guestId);
+        }
+
+        // Auth state change handler
+        firebase.auth().onAuthStateChanged((user) => {
+            const loginScreen = document.getElementById('loginScreen');
+            const chatContainer = document.getElementById('chatContainer');
+            
+            if (user) {
+                console.log("User signed in:", user.displayName);
+                loginScreen.style.display = 'none';
+                chatContainer.style.display = 'flex';
+                
+                // Update user profile
+                const currentUser = document.getElementById('currentUser');
+                const userAvatar = document.getElementById('userAvatar');
+                
+                currentUser.textContent = user.displayName || 'Anonymous';
+                
+                if (user.photoURL) {
+                    userAvatar.innerHTML = `<img src="${user.photoURL}" alt="${user.displayName}" style="width: 100%; height: 100%; border-radius: 50%;">`;
+                } else {
+                    userAvatar.textContent = (user.displayName || 'A').charAt(0).toUpperCase();
+                }
+                
+                // Join default room
+                socket.emit('join_room', { 
+                    room: 'general',
+                    user: {
+                        uid: user.uid,
+                        username: user.displayName || 'Anonymous',
+                        photoURL: user.photoURL
+                    }
+                });
+            } else {
+                console.log("User signed out");
+                loginScreen.style.display = 'flex';
+                chatContainer.style.display = 'none';
+            }
+        });
+
+        // Logout handler
+        document.getElementById('logoutButton').addEventListener('click', () => {
+            firebase.auth().signOut();
+        });
+
+        // Socket event listeners
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('message', (data) => {
+            console.log('Message received:', data);
+            appendMessage(data);
+        });
+
+        // Functions
+        function appendMessage(data) {
+            const { message, sender, type } = data;
+            const isCurrentUser = sender === getCurrentUser().displayName;
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${isCurrentUser ? 'outgoing' : 'incoming'} ${type || ''}`;
+            
+            let messageContent = `
+                <div class="message-header">
+                    <span class="sender">${sender}</span>
+                    <span class="time">${new Date().toLocaleTimeString()}</span>
+                </div>
+                <div class="message-content">
+                    ${message}
+                </div>
+            `;
+            
+            messageElement.innerHTML = messageContent;
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Send message
+        document.getElementById('sendButton').addEventListener('click', () => {
+            const message = document.getElementById('messageInput').value.trim();
+            if (message) {
+                socket.emit('send_message', {
+                    message,
+                    roomId: 'general',
+                    username: getCurrentUser().displayName,
+                    userId: getCurrentUser().uid
+                });
+                
+                document.getElementById('messageInput').value = '';
+            }
+        });
+
+        // Enter key to send
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('sendButton').click();
+            }
+        });
+        
+        // Handle fraud detection form
+        document.getElementById('fraud-detection-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const description = document.getElementById('property-description').value;
+            const price = document.getElementById('property-price').value;
+            const location = document.getElementById('property-location').value;
+            
+            if (!description || !price || !location) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            const button = document.getElementById('analyze-property-btn');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحليل...';
+            button.disabled = true;
+            
+            // Prepare request data
+            const requestData = {
+                description: description,
+                price: price,
+                location: location,
+                userId: getCurrentUser().uid,
+                username: getCurrentUser().displayName
+            };
+            
+            // Send request to API
+            fetch('/api/fraud-detection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Fraud detection result:', data);
+                // Update UI with result
+                button.innerHTML = originalText;
+                button.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error occurred during analysis');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        });
+
+        // Get the current user (either signed in or guest)
+        function getCurrentUser() {
+            return firebase.auth().currentUser || window.guestUser || { displayName: 'زائر', uid: 'guest' };
+        }
+        
+        // Add negotiation assistant functionality
+        function fillNegotiationPrompt(text) {
+            document.getElementById('messageInput').value = '@negotiate ' + text;
+            document.getElementById('messageInput').focus();
+        }
+        
+        document.getElementById('getNegotiationAdvice').addEventListener('click', () => {
+            const situation = document.getElementById('negotiationSituation').value.trim();
+            if (situation) {
+                const messageData = {
+                    message: '@nego ' + situation,
+                    roomId: 'general',
+                    username: getCurrentUser().displayName,
+                    userId: getCurrentUser().uid
+                };
+                
+                socket.emit('send_message', messageData);
+                document.getElementById('negotiationSituation').value = '';
+            } else {
+                alert('الرجاء كتابة موقف التفاوض أولاً');
+            }
+        });
+        
+        // Advanced tools functionality
+        function toggleAdvancedTools() {
+            const advancedTools = document.querySelector('.advanced-tools');
+            if (advancedTools.classList.contains('hidden')) {
+                advancedTools.classList.remove('hidden');
+                document.querySelector('.advanced-tools-toggle i').className = 'fas fa-chevron-up';
+            } else {
+                advancedTools.classList.add('hidden');
+                document.querySelector('.advanced-tools-toggle i').className = 'fas fa-chevron-down';
+            }
+        }
+        
+        document.querySelector('.advanced-tools-toggle').addEventListener('click', toggleAdvancedTools);
+        
+        // Original analyze property functionality
+        if (document.getElementById('analyzeProperty')) {
+            document.getElementById('analyzeProperty').addEventListener('click', async () => {
+                const propertyDescription = document.getElementById('propertyDescription').value;
+                const propertyType = document.getElementById('propertyType').value;
+                const propertyLocation = document.getElementById('propertyLocation').value;
+                const propertyPrice = document.getElementById('propertyPrice').value;
+                const propertyArea = document.getElementById('propertyArea').value;
+                
+                if (!propertyDescription || !propertyType || !propertyLocation || !propertyPrice) {
+                    alert('الرجاء إكمال كافة الحقول المطلوبة');
+                    return;
+                }
+                
+                // Send message to chat instead of API call to preserve original functionality
+                const message = `تحليل العقار: ${propertyType} في ${propertyLocation} بسعر ${propertyPrice} ريال`;
+                sendMessage(message);
+            });
+        }
+        
+        // Original analyze conversation functionality
+        if (document.getElementById('analyzeConversation')) {
+            document.getElementById('analyzeConversation').addEventListener('click', async () => {
+                const conversationText = document.getElementById('conversationText').value;
+                
+                if (!conversationText) {
+                    alert('الرجاء إدخال نص المحادثة للتحليل');
+                    return;
+                }
+                
+                // Send message to chat instead of API call to preserve original functionality
+                const message = `تحليل المحادثة: "${conversationText.substring(0, 50)}..."`;
+                sendMessage(message);
+            });
+        }
+        
+        function sendMessage(message) {
+            const messageData = {
+                message: message,
+                roomId: 'general',
+                username: getCurrentUser().displayName,
+                userId: getCurrentUser().uid
+            };
+            
+            socket.emit('send_message', messageData);
+            
+            // We don't need to append the message here as the socket will echo it back
+        }
+        
+        function sendNegoMessage(message) {
+            console.log('Sending nego message:', message);
+            
+            const messageData = {
+                message: '@nego ' + message,
+                roomId: 'general',
+                username: getCurrentUser().displayName,
+                userId: getCurrentUser().uid
+            };
+            
+            socket.emit('send_message', messageData);
+            
+            // Give user feedback that the message was sent
+            const feedbackMessage = document.createElement('div');
+            feedbackMessage.className = 'message-feedback';
+            feedbackMessage.textContent = 'تم إرسال الاستفسار، بانتظار الرد...';
+            document.getElementById('messagesContainer').appendChild(feedbackMessage);
+            
+            // Remove feedback after 3 seconds
+            setTimeout(() => {
+                feedbackMessage.remove();
+            }, 3000);
+        }
+
+        // Add event listeners to example items
+        document.getElementById('example1').addEventListener('click', () => {
+            sendNegoMessage('أريد شراء شقة بسعر مليون ريال، كيف أتفاوض مع المالك لتخفيض السعر؟');
+        });
+
+        document.getElementById('example2').addEventListener('click', () => {
+            sendNegoMessage('المالك رفض تخفيض السعر ويقول أنه الأفضل في المنطقة. كيف أثبت له أن السعر مبالغ فيه؟');
+        });
+
+        document.getElementById('example3').addEventListener('click', () => {
+            sendNegoMessage('وجدت عيوبًا في العقار بعد المعاينة. كيف أستخدمها للتفاوض على تخفيض السعر؟');
+        });
+    </script>
+</body>
+</html>
